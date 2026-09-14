@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Barnsley fern</title>
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #05070a;
+    color: #e8efe8;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    padding: 1.25rem;
+  }
+  header { text-align: center; max-width: 640px; margin-bottom: 0.75rem; }
+  h1 { margin: 0 0 0.25rem; font-size: 1.35rem; }
+  p.sub { margin: 0; opacity: 0.65; font-size: 0.9rem; }
+  #wrap { position: relative; width: 100%; max-width: 480px; }
+  canvas {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 8px;
+    background: #04080a;
+  }
+  .controls {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+    margin-top: 0.85rem;
+    flex-wrap: wrap;
+  }
+  button {
+    background: rgba(255,255,255,0.08);
+    color: inherit;
+    border: 1px solid rgba(255,255,255,0.15);
+    padding: 0.45rem 0.9rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+  button:hover { background: rgba(255,255,255,0.15); }
+  .info { margin-top: 0.6rem; font-size: 0.78rem; opacity: 0.55; text-align: center; max-width: 480px; }
+  .status {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    font-size: 0.7rem;
+    background: rgba(0,0,0,0.5);
+    padding: 2px 6px;
+    border-radius: 4px;
+    opacity: 0.85;
+    pointer-events: none;
+    color: #e8efe8;
+  }
+  a.back { color: inherit; opacity: 0.6; font-size: 0.8rem; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Barnsley fern</h1>
+    <p class="sub">Four simple transforms, picked at random over and over &mdash; the shape emerges purely from repetition, no picture of a fern anywhere in the code.</p>
+  </header>
+
+  <div id="wrap">
+    <canvas id="c" width="480" height="993"></canvas>
+    <div class="status" id="status">points: 0</div>
+  </div>
+
+  <div class="controls">
+    <button id="toggle">Pause</button>
+    <button id="restart">Restart growth</button>
+  </div>
+
+  <p class="info">Growth never really finishes &mdash; it keeps sprinkling in new points forever. This is the same "chaos game" Michael Barnsley used in 1988 to show that a realistic fern can come from four lines of matrix math.</p>
+  <p class="info"><a class="back" href="../../">&larr; back to web</a></p>
+
+<script>
+(function () {
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  const statusEl = document.getElementById('status');
+  const wrap = document.getElementById('wrap');
+
+  const BOUNDS = { xmin: -2.182, xmax: 2.6558, ymin: 0, ymax: 9.9983 };
+  const ASPECT = (BOUNDS.ymax - BOUNDS.ymin) / (BOUNDS.xmax - BOUNDS.xmin);
+
+  let px = 0, py = 0;
+  let total = 0;
+  let running = true;
+  let warm = 0;
+
+  function resizeCanvas() {
+    const w = Math.min(480, wrap.clientWidth || 480);
+    canvas.width = Math.round(w);
+    canvas.height = Math.round(w * ASPECT);
+  }
+
+  function reset() {
+    resizeCanvas();
+    ctx.fillStyle = '#04080a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    px = 0; py = 0; total = 0; warm = 0;
+  }
+
+  function toCanvas(x, y) {
+    const nx = (x - BOUNDS.xmin) / (BOUNDS.xmax - BOUNDS.xmin);
+    const ny = (y - BOUNDS.ymin) / (BOUNDS.ymax - BOUNDS.ymin);
+    return [nx * canvas.width, canvas.height - ny * canvas.height];
+  }
+
+  function step() {
+    const r = Math.random();
+    let nx, ny;
+    if (r < 0.01) {
+      nx = 0;
+      ny = 0.16 * py;
+    } else if (r < 0.86) {
+      nx = 0.85 * px + 0.04 * py;
+      ny = -0.04 * px + 0.85 * py + 1.6;
+    } else if (r < 0.93) {
+      nx = 0.2 * px - 0.26 * py;
+      ny = 0.23 * px + 0.22 * py + 1.6;
+    } else {
+      nx = -0.15 * px + 0.28 * py;
+      ny = 0.26 * px + 0.24 * py + 0.44;
+    }
+    px = nx; py = ny;
+  }
+
+  const POINTS_PER_FRAME = 2500;
+
+  function frame() {
+    if (running) {
+      for (let i = 0; i < POINTS_PER_FRAME; i++) {
+        step();
+        if (warm < 20) { warm++; continue; }
+        const [cx, cy] = toCanvas(px, py);
+        const t = Math.max(0, Math.min(1, py / BOUNDS.ymax));
+        const hue = 100 + t * 30;
+        const light = 20 + t * 30;
+        ctx.fillStyle = `hsla(${hue}, 65%, ${light}%, 0.55)`;
+        ctx.fillRect(cx, cy, 1, 1);
+        total++;
+      }
+      statusEl.textContent = `points: ${total.toLocaleString()}`;
+    }
+    requestAnimationFrame(frame);
+  }
+
+  window.addEventListener('resize', reset);
+  document.getElementById('restart').addEventListener('click', reset);
+  document.getElementById('toggle').addEventListener('click', (e) => {
+    running = !running;
+    e.target.textContent = running ? 'Pause' : 'Resume';
+  });
+
+  reset();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
