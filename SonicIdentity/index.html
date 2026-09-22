@@ -149,18 +149,19 @@
 
   .table-wrap {
     overflow-x: auto;
+    overflow-y: hidden;
     border: 1px solid var(--line);
     border-radius: 10px;
     margin-top: 8px;
   }
-  table { width: 100%; border-collapse: collapse; font-size: 0.92rem; min-width: 560px; }
-  th, td { padding: 12px 16px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); }
+  table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+  table.checks { table-layout: fixed; }
+  th, td { padding: 12px 16px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); overflow-wrap: break-word; }
   th {
     font-family: 'Arial Narrow', Arial, Helvetica, sans-serif;
     font-weight: 700;
     font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em;
     color: var(--ink-muted); background: var(--surface);
-    position: sticky; top: 0;
   }
   tbody tr:last-child td { border-bottom: none; }
   td.dim { color: var(--ink-muted); }
@@ -238,6 +239,8 @@
 
   @media (max-width: 480px) {
     .page { padding-block: 40px 60px; }
+    table.checks th, table.checks td { padding: 10px 6px; font-size: 0.85rem; }
+    table.checks td.yes, table.checks td.no { font-size: 0.95rem; }
   }
 
   /* Glossary terms: hoverable on desktop, tappable on touch */
@@ -328,6 +331,12 @@
     <p class="section-note">A first pass at which sonic-identity components would be included at each tier. This starts from the full glossary of component types &mdash; we'll trim it down together to what's actually relevant.</p>
     <div class="table-wrap">
       <table class="checks">
+        <colgroup>
+          <col style="width:46%">
+          <col style="width:18%">
+          <col style="width:18%">
+          <col style="width:18%">
+        </colgroup>
         <thead>
           <tr><th>Component</th><th>Minimum</th><th>Desired</th><th>Complete</th></tr>
         </thead>
@@ -464,19 +473,10 @@
         <a href="https://www.tambr.nl/cases/open-universiteit/" target="_blank" rel="noopener">Listen: brand anthem &amp; derived videos</a>
       </div>
     </div>
-
-    <div class="case">
-      <div class="eyebrow">NPR &middot; public radio, US</div>
-      <h3>Included for a different reason: how to test a sound before committing to it</h3>
-      <p>NPR replaced <em>Morning Edition</em>'s 40-year-old theme &mdash; but instead of a plain listener-preference survey, which mostly just measures resistance to change, they used implicit-association testing to check whether a new theme could overcome people's attachment to the old one before it aired. It landed; hosts and critics called it &ldquo;an instant classic.&rdquo; This isn't a start-with-a-system case like the two above &mdash; it's one flagship asset, done rigorously &mdash; but it's a useful model for validating whatever we end up commissioning.</p>
-      <div class="links">
-        <a href="https://www.npr.org/2019/05/06/720570666/morning-edition-debuts-the-shows-updated-theme-music" target="_blank" rel="noopener">Listen: old vs. new theme</a>
-      </div>
-    </div>
   </section>
 
   <section id="research">
-    <h2>What the research actually supports</h2>
+    <h2>Facts and figures</h2>
     <p>It's tempting to lead with &ldquo;sound is more memorable than a logo&rdquo; &mdash; but most of the numbers behind that claim online are self-published by companies that sell sonic branding, including the kind of vendor that prompted this brief. The findings below hold up better:</p>
     <ul class="evidence">
       <li><strong>Audio assets were 3.44&times; more effective</strong> than visual assets at producing high-performing ads, and sonic logos specifically were <strong>8.53&times; more likely</strong> to appear in a high-performing ad than other distinctive brand assets. <span class="section-note">&mdash; Ipsos, 2020</span></li>
@@ -484,16 +484,6 @@
       <li><strong>Congruency between a sound logo and its visual logo</strong> measurably improves how a brand's personality and quality are perceived &mdash; the actual evidence for doing sound and visual identity together, not sound alone. <span class="section-note">&mdash; Puligadda &amp; VanBergen, 2023</span></li>
     </ul>
     <p class="section-note" style="margin-top:14px;">All three summarized in Spence &amp; Keller, &ldquo;Sonic branding: A narrative review at the intersection of art and science,&rdquo; <em>Psychology &amp; Marketing</em> 41 (2024): 1530&ndash;1548.</p>
-  </section>
-
-  <section id="open">
-    <h2>Still open</h2>
-    <span class="draft-badge">Needs your input before this goes anywhere</span>
-    <ul class="open-items">
-      <li>What decision is this actually feeding &mdash; a go/no-go on talking to the vendor, a budget request, something else?</li>
-      <li>Rough budget bands for the minimum vs. complete tiers, if any exist yet</li>
-      <li>Who signs off, and who else should be consulted before this goes further</li>
-    </ul>
   </section>
 
   <section id="case-study">
