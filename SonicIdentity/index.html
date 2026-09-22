@@ -1,0 +1,719 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sonic Identity UT</title>
+<style>
+  /* Colour tokens: University of Twente official "House-style color palette"
+     (UT Brand Architecture handbook, Studio Dumbar/M&C, v5.2, p.23 — online values).
+     Light: 04_UT_Darkblue accent, 01_UT_Black / 02_UT_Grey / 04_UT_Grey / 05_UT_Grey / 06_UT_White.
+     Dark mode has no official UT spec; it's derived from the same palette (03_UT_Blue
+     accent for contrast on a dark ground, neutrals interpolated from 01_UT_Black). */
+  :root {
+    --bg: #F0F1F2;
+    --surface: #FFFFFF;
+    --surface-2: #DCDDDE;
+    --ink: #1E2328;
+    --ink-muted: #686B6E;
+    --line: #AFB1B3;
+    --accent: #002C5F;
+    --accent-ink: #FFFFFF;
+    color-scheme: light dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #1E2328;
+      --surface: #262B31;
+      --surface-2: #31373D;
+      --ink: #F0F1F2;
+      --ink-muted: #AFB1B3;
+      --line: #454B51;
+      --accent: #4FA9C4;
+      --accent-ink: #1E2328;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #1E2328;
+    --surface: #262B31;
+    --surface-2: #31373D;
+    --ink: #F0F1F2;
+    --ink-muted: #AFB1B3;
+    --line: #454B51;
+    --accent: #4FA9C4;
+    --accent-ink: #1E2328;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: Arial, Helvetica, sans-serif;
+    line-height: 1.6;
+  }
+  ::selection { background: var(--accent); color: var(--accent-ink); }
+
+  a { color: inherit; }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .page {
+    max-width: 720px;
+    margin-inline: auto;
+    padding-inline: 20px;
+    padding-block: 56px 80px;
+  }
+
+  /* Type: University of Twente's house-style font is Linotype Univers (licensed).
+     UT's own documented fallback — "If 'Linotype Univers' cannot be used, the fonts
+     'Arial' and 'Arial Narrow' can also be used" (utwente.nl, visual identity / font) —
+     is used here throughout: Arial Narrow for the condensed-caps heading/label role
+     Univers Condensed plays in the handbook, plain Arial for Univers 330 body text. */
+  h1, h2, h3 {
+    font-family: 'Arial Narrow', Arial, Helvetica, sans-serif;
+    font-weight: 700;
+    text-transform: uppercase;
+    text-wrap: balance;
+    margin: 0;
+  }
+  h1 { line-height: 1.05; }
+  .h1-lead {
+    display: block;
+    font-size: clamp(2.1rem, 6.5vw, 3rem);
+    letter-spacing: 0.005em;
+  }
+  .h1-sub {
+    display: block;
+    font-weight: 300;
+    font-size: clamp(1.3rem, 4vw, 1.8rem);
+    color: var(--ink-muted);
+    letter-spacing: 0.01em;
+    margin-top: 2px;
+  }
+  h2 { font-size: 1.35rem; letter-spacing: 0.01em; margin-bottom: 4px; }
+  h3 {
+    font-size: 1.15rem; font-weight: 700; text-transform: none;
+    letter-spacing: normal;
+  }
+  p { margin: 0 0 1em; max-width: 62ch; }
+  p:last-child { margin-bottom: 0; }
+
+  .kicker {
+    display: flex; flex-wrap: wrap; gap: 10px;
+    font-family: 'Arial Narrow', Arial, Helvetica, sans-serif;
+    font-weight: 700;
+    font-size: 0.75rem; letter-spacing: 0.07em; text-transform: uppercase;
+    color: var(--ink-muted); margin-bottom: 18px;
+  }
+  .kicker .sep { opacity: 0.5; }
+
+  .dek {
+    font-size: 1.08rem;
+    color: var(--ink-muted);
+    max-width: 58ch;
+    margin-top: 14px;
+  }
+
+  .eq {
+    display: flex; align-items: flex-end; gap: 4px;
+    height: 30px; margin: 28px 0 0;
+  }
+  .eq span {
+    width: 4px; border-radius: 2px;
+    background: var(--accent); opacity: 0.6;
+    display: block;
+  }
+
+  section { margin-top: 56px; }
+  section > h2 { margin-bottom: 14px; }
+  .section-note { color: var(--ink-muted); margin-bottom: 18px; }
+
+  ul.plain { margin: 14px 0; padding-left: 1.1em; }
+  ul.plain li { margin-bottom: 6px; }
+  ul.plain li:last-child { margin-bottom: 0; }
+
+  .draft-badge {
+    display: inline-block;
+    font-family: 'Arial Narrow', Arial, Helvetica, sans-serif;
+    font-weight: 700;
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    padding: 3px 9px;
+    margin-bottom: 14px;
+  }
+
+  .table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    margin-top: 8px;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 0.92rem; min-width: 560px; }
+  th, td { padding: 12px 16px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); }
+  th {
+    font-family: 'Arial Narrow', Arial, Helvetica, sans-serif;
+    font-weight: 700;
+    font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em;
+    color: var(--ink-muted); background: var(--surface);
+    position: sticky; top: 0;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  td.dim { color: var(--ink-muted); }
+  td:first-child, th:first-child { font-weight: 700; }
+  table.checks th:not(:first-child) { text-align: center; }
+  table.checks td.yes, table.checks td.no { text-align: center; font-size: 1rem; }
+  table.checks td.yes { color: var(--accent); font-weight: 700; }
+  table.checks td.no { color: var(--line); }
+
+  .case {
+    padding-block: 28px;
+    border-top: 1px solid var(--line);
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .case:first-of-type { border-top: none; padding-top: 4px; }
+  .eyebrow {
+    font-family: 'Arial Narrow', Arial, Helvetica, sans-serif;
+    font-weight: 700;
+    font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--accent);
+  }
+  .case blockquote {
+    margin: 4px 0 0; padding-left: 14px;
+    border-left: 3px solid var(--accent);
+    font-family: Arial, Helvetica, sans-serif; font-style: normal;
+    color: var(--ink-muted); max-width: 56ch;
+  }
+  .links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+  .links a {
+    font-family: 'Arial Narrow', Arial, Helvetica, sans-serif;
+    font-weight: 700;
+    font-size: 0.8rem; text-decoration: none;
+    border: 1px solid var(--line); padding: 7px 12px; border-radius: 6px;
+    color: var(--ink); white-space: nowrap;
+  }
+  .links a:hover { border-color: var(--accent); color: var(--accent); }
+  .links a::after { content: " \2197"; opacity: 0.6; }
+
+  /* Real YouTube embed */
+  .video-embed-wrap {
+    position: relative; width: 100%; max-width: 640px;
+    aspect-ratio: 16 / 9; margin: 16px 0;
+    border-radius: 10px; overflow: hidden; background: var(--ink);
+  }
+  .video-embed-wrap iframe {
+    position: absolute; inset: 0; width: 100%; height: 100%; border: 0;
+  }
+
+  ul.evidence { margin: 0; padding-left: 1.1em; }
+  ul.evidence li { margin-bottom: 12px; max-width: 60ch; }
+  ul.evidence li:last-child { margin-bottom: 0; }
+
+  ul.open-items { margin: 0; padding-left: 1.1em; }
+  ul.open-items li { margin-bottom: 8px; max-width: 60ch; }
+
+  .sources {
+    list-style: none; margin: 0; padding: 0;
+    display: flex; flex-direction: column; gap: 8px;
+    font-family: Arial, Helvetica, sans-serif; font-size: 0.85rem;
+  }
+  .sources a { text-decoration: none; border-bottom: 1px solid var(--line); }
+  .sources a:hover { border-color: var(--accent); color: var(--accent); }
+  .sources .src-label { color: var(--ink-muted); }
+
+  hr.rule {
+    border: none; border-top: 1px solid var(--line);
+    margin: 56px 0 0;
+  }
+  footer.meta {
+    margin-top: 20px;
+    color: var(--ink-muted);
+    font-size: 0.82rem;
+  }
+
+  @media (max-width: 480px) {
+    .page { padding-block: 40px 60px; }
+  }
+
+  /* Glossary terms: hoverable on desktop, tappable on touch */
+  .term-wrap { position: relative; display: inline-block; }
+  button.term {
+    font: inherit; color: inherit; background: none; border: none;
+    padding: 0; margin: 0; cursor: help;
+    text-decoration: underline dotted var(--ink-muted);
+    text-underline-offset: 3px; text-decoration-thickness: 1px;
+  }
+  button.term:hover,
+  button.term:focus-visible,
+  .term-wrap.is-open button.term {
+    color: var(--accent); text-decoration-color: var(--accent);
+  }
+  button.term:focus-visible { outline: none; }
+  .tip {
+    position: absolute; z-index: 20; left: 0; top: calc(100% + 8px);
+    width: max-content; max-width: min(280px, calc(100vw - 40px));
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 8px; padding: 12px 14px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.18);
+    font-family: Arial, Helvetica, sans-serif; font-size: 0.85rem; line-height: 1.5;
+    color: var(--ink);
+    opacity: 0; visibility: hidden; transform: translateY(4px);
+    transition: opacity .15s ease, transform .15s ease;
+    pointer-events: none;
+  }
+  .tip .tip-term {
+    display: block; font-family: 'Arial Narrow', Arial, Helvetica, sans-serif;
+    font-weight: 700;
+    font-size: 0.72rem; letter-spacing: 0.05em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 6px;
+  }
+  .tip .tip-source {
+    display: block; margin-top: 8px;
+    font-family: Arial, Helvetica, sans-serif; font-size: 0.75rem; color: var(--ink-muted);
+  }
+  .tip .tip-source a { color: inherit; text-decoration: underline; }
+  .term-wrap:hover .tip,
+  .term-wrap:focus-within .tip,
+  .term-wrap.is-open .tip {
+    opacity: 1; visibility: visible; transform: translateY(0); pointer-events: auto;
+  }
+</style>
+</head>
+<body>
+<main class="page">
+
+  <div class="kicker">
+    <span>Internal brief</span><span class="sep">&middot;</span>
+    <span>Draft &mdash; for discussion</span><span class="sep">&middot;</span>
+    <span>UT MarCom</span>
+  </div>
+
+  <h1><span class="h1-lead">Sonic identity UT</span></h1>
+  <p class="dek">This document is divided into three sections. Current situation, desired situation, case study.</p>
+  <p class="dek">Relevant words and phrases can be hovered over or tapped for a definition.</p>
+
+  <div class="eq" aria-hidden="true">
+    <span style="height:40%"></span><span style="height:70%"></span><span style="height:30%"></span>
+    <span style="height:90%"></span><span style="height:55%"></span><span style="height:20%"></span>
+    <span style="height:65%"></span><span style="height:45%"></span><span style="height:80%"></span>
+    <span style="height:35%"></span><span style="height:60%"></span><span style="height:25%"></span>
+    <span style="height:75%"></span><span style="height:50%"></span><span style="height:85%"></span>
+    <span style="height:40%"></span>
+  </div>
+
+  <section id="situation">
+    <h2>Current situation</h2>
+    <p>Currently the UT Identity does not include an audio component. Both the number and diversity of our media productions are growing while lacking a sonic identity.</p>
+    <p>Media productions currently use stock sound effects and music. A functional solution on an individual basis but it does not contribute to a recognisable sonic identity.</p>
+    <p>Media productions that would benefit from having a UT Sonic Identity can be broadly categorised as follows:</p>
+    <ul class="plain">
+      <li>Events &mdash; projection &amp; live</li>
+      <li>Video &mdash; standalone, livestream, pre-recorded, series</li>
+      <li>Podcasts</li>
+      <li>Social</li>
+      <li>Radio ads</li>
+    </ul>
+    <p>This document presents a non-comprehensive list of audio products that collectively contribute to a sonic identity.</p>
+    <p>The final segment of the document makes a case for why it's better to approach a sonic identity as a comprehensive system rather than individual audio products.</p>
+  </section>
+
+  <section id="products">
+    <h2>What we'd actually need</h2>
+    <span class="draft-badge">Draft proposal &mdash; needs your review</span>
+    <p class="section-note">A first pass at which sonic-identity components would be included at each tier. This starts from the full glossary of component types &mdash; we'll trim it down together to what's actually relevant.</p>
+    <div class="table-wrap">
+      <table class="checks">
+        <thead>
+          <tr><th>Component</th><th>Minimum</th><th>Desired</th><th>Complete</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><button type="button" class="term" data-term="sonic-logo">Sonic logo</button></td>
+            <td class="yes">&check;</td>
+            <td class="yes">&check;</td>
+            <td class="yes">&check;</td>
+          </tr>
+          <tr>
+            <td><button type="button" class="term" data-term="sonic-dna">Sonic DNA</button></td>
+            <td class="no">&ndash;</td>
+            <td class="yes">&check;</td>
+            <td class="yes">&check;</td>
+          </tr>
+          <tr>
+            <td><button type="button" class="term" data-term="brand-anthem">Brand anthem</button></td>
+            <td class="no">&ndash;</td>
+            <td class="yes">&check;</td>
+            <td class="yes">&check;</td>
+          </tr>
+          <tr>
+            <td><button type="button" class="term" data-term="jingle">Jingle</button></td>
+            <td class="no">&ndash;</td>
+            <td class="yes">&check;</td>
+            <td class="yes">&check;</td>
+          </tr>
+          <tr>
+            <td><button type="button" class="term" data-term="stinger">Stinger</button></td>
+            <td class="yes">&check;</td>
+            <td class="yes">&check;</td>
+            <td class="yes">&check;</td>
+          </tr>
+          <tr>
+            <td><button type="button" class="term" data-term="bed">Bed</button></td>
+            <td class="yes">&check;</td>
+            <td class="yes">&check;</td>
+            <td class="yes">&check;</td>
+          </tr>
+          <tr>
+            <td><button type="button" class="term" data-term="ambience">Ambience</button></td>
+            <td class="no">&ndash;</td>
+            <td class="yes">&check;</td>
+            <td class="yes">&check;</td>
+          </tr>
+          <tr>
+            <td><button type="button" class="term" data-term="bumper">Bumper</button></td>
+            <td class="no">&ndash;</td>
+            <td class="yes">&check;</td>
+            <td class="yes">&check;</td>
+          </tr>
+          <tr>
+            <td><button type="button" class="term" data-term="sweeper">Sweeper</button></td>
+            <td class="no">&ndash;</td>
+            <td class="no">&ndash;</td>
+            <td class="yes">&check;</td>
+          </tr>
+          <tr>
+            <td><button type="button" class="term" data-term="ident">Ident</button></td>
+            <td class="no">&ndash;</td>
+            <td class="yes">&check;</td>
+            <td class="yes">&check;</td>
+          </tr>
+          <tr>
+            <td><button type="button" class="term" data-term="earcon">Earcon</button></td>
+            <td class="no">&ndash;</td>
+            <td class="no">&ndash;</td>
+            <td class="yes">&check;</td>
+          </tr>
+          <tr>
+            <td><button type="button" class="term" data-term="ux-sound">UX sound</button></td>
+            <td class="no">&ndash;</td>
+            <td class="no">&ndash;</td>
+            <td class="yes">&check;</td>
+          </tr>
+          <tr>
+            <td><button type="button" class="term" data-term="on-hold-music">On-hold music</button></td>
+            <td class="no">&ndash;</td>
+            <td class="no">&ndash;</td>
+            <td class="yes">&check;</td>
+          </tr>
+          <tr>
+            <td><button type="button" class="term" data-term="vocal-identity">Vocal identity</button></td>
+            <td class="no">&ndash;</td>
+            <td class="no">&ndash;</td>
+            <td class="yes">&check;</td>
+          </tr>
+          <tr>
+            <td><button type="button" class="term" data-term="sung-slogan">Sung slogan</button></td>
+            <td class="no">&ndash;</td>
+            <td class="no">&ndash;</td>
+            <td class="yes">&check;</td>
+          </tr>
+          <tr>
+            <td><button type="button" class="term" data-term="localization">Localization variants</button></td>
+            <td class="no">&ndash;</td>
+            <td class="yes">&check;</td>
+            <td class="yes">&check;</td>
+          </tr>
+          <tr>
+            <td>Guidelines document</td>
+            <td class="yes">&check;</td>
+            <td class="yes">&check;</td>
+            <td class="yes">&check;</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="section-note" style="margin-top:14px;">The minimum tier gives us one recognizable mark and stops the &ldquo;no sound at all&rdquo; problem. It doesn't solve the stitched-together problem anywhere else &mdash; that's what the complete tier is for, and it's the version the case studies below actually demonstrate.</p>
+  </section>
+
+  <section id="cases">
+    <h2>Why start with a system, not a product</h2>
+    <p>The temptation with a limited budget is to buy one thing &mdash; a sonic logo for the website, say &mdash; and add more later as needs come up. The three cases below are what that choice looks like when it's done well, and when it's tested properly, at organizations that share more with us than a payments network usually would.</p>
+
+    <div class="case">
+      <div class="eyebrow">Mastercard &middot; global payments</div>
+      <h3>One system, applied everywhere &mdash; not a jingle left alone</h3>
+      <p>Mastercard's &ldquo;<button type="button" class="term" data-term="sonic-dna">Sonic DNA</button>&rdquo; is a single proprietary system, not a fixed jingle: the same identity resolves into ads, live and virtual events, digital and social content, and &mdash; distinctively &mdash; the sound the card itself makes at checkout. It's been watermarked across sponsorships including the UEFA Champions League and Rugby World Cups, and won a Red Dot Design Award.</p>
+      <div class="links">
+        <a href="https://www.red-dot.org/project/the-sound-of-mastercard-55385" target="_blank" rel="noopener">Watch: The Sound of Mastercard</a>
+        <a href="https://ampsoundbranding.com/work/the-sound-of-mastercard" target="_blank" rel="noopener">Case study</a>
+      </div>
+    </div>
+
+    <div class="case">
+      <div class="eyebrow">Open Universiteit &middot; distance-learning university, NL</div>
+      <h3>A Dutch university already made this exact bet</h3>
+      <p>Open Universiteit built one modular &ldquo;<button type="button" class="term" data-term="brand-anthem">brand anthem</button>&rdquo; &mdash; electronic production layered with a live string quartet, deliberately &ldquo;rougher than you'd expect from a university&rdquo; &mdash; then derived a commercial, a podcast intro, their Dies Natalis ceremony sound, phone systems, recruitment videos and UI sounds from it.</p>
+      <blockquote>&ldquo;A brand is more than what you see &mdash; sound determines more than 60% of the experience in video or audiovisual communication.&rdquo;<br>&mdash; Marco Koolen, Head of Marketing &amp; Communications</blockquote>
+      <p class="section-note" style="margin-top:2px;">(Their figure, not independently verified &mdash; see the research section below for numbers we can stand behind.)</p>
+      <div class="links">
+        <a href="https://www.tambr.nl/cases/open-universiteit/" target="_blank" rel="noopener">Listen: brand anthem &amp; derived videos</a>
+      </div>
+    </div>
+
+    <div class="case">
+      <div class="eyebrow">NPR &middot; public radio, US</div>
+      <h3>Included for a different reason: how to test a sound before committing to it</h3>
+      <p>NPR replaced <em>Morning Edition</em>'s 40-year-old theme &mdash; but instead of a plain listener-preference survey, which mostly just measures resistance to change, they used implicit-association testing to check whether a new theme could overcome people's attachment to the old one before it aired. It landed; hosts and critics called it &ldquo;an instant classic.&rdquo; This isn't a start-with-a-system case like the two above &mdash; it's one flagship asset, done rigorously &mdash; but it's a useful model for validating whatever we end up commissioning.</p>
+      <div class="links">
+        <a href="https://www.npr.org/2019/05/06/720570666/morning-edition-debuts-the-shows-updated-theme-music" target="_blank" rel="noopener">Listen: old vs. new theme</a>
+      </div>
+    </div>
+  </section>
+
+  <section id="research">
+    <h2>What the research actually supports</h2>
+    <p>It's tempting to lead with &ldquo;sound is more memorable than a logo&rdquo; &mdash; but most of the numbers behind that claim online are self-published by companies that sell sonic branding, including the kind of vendor that prompted this brief. The findings below hold up better:</p>
+    <ul class="evidence">
+      <li><strong>Audio assets were 3.44&times; more effective</strong> than visual assets at producing high-performing ads, and sonic logos specifically were <strong>8.53&times; more likely</strong> to appear in a high-performing ad than other distinctive brand assets. <span class="section-note">&mdash; Ipsos, 2020</span></li>
+      <li><strong>Audio outperformed visual media</strong> (online video, display, social) on attention and brand equity. <span class="section-note">&mdash; Dentsu / Lumen Research, 2023</span></li>
+      <li><strong>Congruency between a sound logo and its visual logo</strong> measurably improves how a brand's personality and quality are perceived &mdash; the actual evidence for doing sound and visual identity together, not sound alone. <span class="section-note">&mdash; Puligadda &amp; VanBergen, 2023</span></li>
+    </ul>
+    <p class="section-note" style="margin-top:14px;">All three summarized in Spence &amp; Keller, &ldquo;Sonic branding: A narrative review at the intersection of art and science,&rdquo; <em>Psychology &amp; Marketing</em> 41 (2024): 1530&ndash;1548.</p>
+  </section>
+
+  <section id="open">
+    <h2>Still open</h2>
+    <span class="draft-badge">Needs your input before this goes anywhere</span>
+    <ul class="open-items">
+      <li>What decision is this actually feeding &mdash; a go/no-go on talking to the vendor, a budget request, something else?</li>
+      <li>Rough budget bands for the minimum vs. complete tiers, if any exist yet</li>
+      <li>Who signs off, and who else should be consulted before this goes further</li>
+    </ul>
+  </section>
+
+  <section id="case-study">
+    <h2>Case study</h2>
+    <p>The development of Mastercard's Sonic Identity has been very well documented. Below you'll find an abbreviated case study.</p>
+
+    <h3>The Mastercard sound</h3>
+    <p>The foundation stone of Mastercard's Sonic Identity is the sound that every customer hears whenever they pay with their Master Card.</p>
+    <p>For the UT, the first challenge would be creating such a sound for ourselves. Perhaps the sound of the perfect idea arriving, a solution realised, or innovation achieved.</p>
+    <div class="video-embed-wrap">
+      <iframe src="https://www.youtube.com/embed/vZ6a58mQlK4" title="Mastercard Checkout Sound and Animation" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+    </div>
+  </section>
+
+  <hr class="rule">
+  <footer class="meta">
+    <h2 style="font-size:1rem; color:var(--ink-muted); margin-bottom:12px;">Sources</h2>
+    <ul class="sources">
+      <li><span class="src-label">Mastercard &mdash;</span> <a href="https://www.red-dot.org/project/the-sound-of-mastercard-55385" target="_blank" rel="noopener">Red Dot Design Award, &ldquo;The Sound of Mastercard&rdquo;</a></li>
+      <li><span class="src-label">Mastercard &mdash;</span> <a href="https://ampsoundbranding.com/work/the-sound-of-mastercard" target="_blank" rel="noopener">amp sound branding, case study</a></li>
+      <li><span class="src-label">Mastercard &mdash;</span> <a href="https://www.marketingbrew.com/stories/2022/10/17/inside-mastercard-s-10-layer-sonic-branding-plan" target="_blank" rel="noopener">Marketing Brew, &ldquo;Inside Mastercard's 10-layer sonic branding plan&rdquo;</a></li>
+      <li><span class="src-label">Open Universiteit &mdash;</span> <a href="https://www.tambr.nl/cases/open-universiteit/" target="_blank" rel="noopener">TAMBR, case study</a></li>
+      <li><span class="src-label">NPR &mdash;</span> <a href="https://www.npr.org/2019/05/06/720570666/morning-edition-debuts-the-shows-updated-theme-music" target="_blank" rel="noopener">NPR, &ldquo;Morning Edition Debuts The Show's Updated Theme Music&rdquo;</a></li>
+      <li><span class="src-label">NPR &mdash;</span> <a href="https://www.sentientdecisionscience.com/validating-nprs-sonic-branding-behavioral-science/" target="_blank" rel="noopener">Sentient Decision Science, validation methodology</a></li>
+      <li><span class="src-label">Research &mdash;</span> <a href="https://onlinelibrary.wiley.com/doi/full/10.1002/mar.21995" target="_blank" rel="noopener">Spence &amp; Keller (2024), &ldquo;Sonic branding: A narrative review,&rdquo; Psychology &amp; Marketing 41</a></li>
+    </ul>
+  </footer>
+
+</main>
+
+<script>
+(function () {
+  // ------------------------------------------------------------------
+  // GLOSSARY — edit definitions here. Every <button class="term"
+  // data-term="key"> on the page picks these up automatically, so
+  // changing a definition here updates every place it's used.
+  //
+  // To make a new word hoverable anywhere in the text above, wrap it as:
+  //   <button type="button" class="term" data-term="your-key">word</button>
+  // then add a matching "your-key" entry below (or reuse an existing key).
+  // ------------------------------------------------------------------
+  const GLOSSARY = {
+    'sonic-logo': {
+      term: 'Sonic logo',
+      def: 'A very short piece of music (often no more than 3–5 seconds) that encapsulates the essence of a brand — the audio equivalent of a visual logo.',
+      source: 'Unmute, Glossary',
+      url: 'https://www.unmute.net/glossary'
+    },
+    'sonic-dna': {
+      term: 'Sonic DNA',
+      def: 'A recurring, distinctive set of musical features and motifs that define a brand’s sound identity — the foundation every branded composition is derived from.',
+      source: 'Sixième Son, Sonic Branding Glossary',
+      url: 'https://www.sixiemeson.com/news/sonic-branding-glossary/'
+    },
+    'brand-anthem': {
+      term: 'Brand anthem',
+      def: 'A longer musical piece reflecting a brand’s spirit and values, often used in emotional storytelling or high-impact campaigns.',
+      source: 'Sixième Son, Sonic Branding Glossary',
+      url: 'https://www.sixiemeson.com/news/sonic-branding-glossary/'
+    },
+    'jingle': {
+      term: 'Jingle',
+      def: 'A short piece of music that often incorporates a sung slogan and has a recognizable melodic hook.',
+      source: 'Unmute, Glossary',
+      url: 'https://www.unmute.net/glossary'
+    },
+    'stinger': {
+      term: 'Stinger / sting',
+      def: 'A short musical phrase, primarily used in broadcasting and film, as a form of punctuation — marking a transition or a beat.',
+      source: 'Wikipedia, Sting (musical phrase)',
+      url: 'https://en.wikipedia.org/wiki/Sting_(musical_phrase)'
+    },
+    'bed': {
+      term: 'Bed / music bed',
+      def: 'A piece of background music layered underneath dialogue or other audio, used to set the mood without overshadowing the main content.',
+      source: 'Riverside, Music Bed',
+      url: 'https://riverside.com/video-editor/video-editing-glossary/music-bed'
+    },
+    'ambience': {
+      term: 'Ambience',
+      def: 'Sound design that acts as a subtle background tapestry, setting the scene or defining a location — the correct term for an atmospheric bed at a live event (not “room tone”, see below).',
+      source: 'Unmute, Glossary',
+      url: 'https://www.unmute.net/glossary'
+    },
+    'room-tone': {
+      term: 'Room tone / presence',
+      def: 'The “silence” recorded at a location when no dialogue is spoken — used to bridge edits, not to create atmosphere (that’s ambience).',
+      source: 'Wikipedia, Presence (sound recording)',
+      url: 'https://en.wikipedia.org/wiki/Presence_(sound_recording)'
+    },
+    'bumper': {
+      term: 'Bumper',
+      def: 'A brief announcement, usually two to fifteen seconds long, placed between a pause in a program and its break — typically carrying the show or network name over signature music.',
+      source: 'Wikipedia, Bumper (broadcasting)',
+      url: 'https://en.wikipedia.org/wiki/Bumper_(broadcasting)'
+    },
+    'sweeper': {
+      term: 'Sweeper',
+      def: 'A short voiced statement — often the station ID and slogan, kept to about 15–20 words — produced with music and effects to identify a station between programming.',
+      source: 'Music Radio Creative, Definition of a Radio Sweeper',
+      url: 'https://producer.musicradiocreative.com/definition-of-a-radio-sweeper/'
+    },
+    'ident': {
+      term: 'Ident / station identification',
+      def: 'The practice of a station or network identifying itself on-air, typically by call sign or brand name.',
+      source: 'Wikipedia, Station identification',
+      url: 'https://en.wikipedia.org/wiki/Station_identification'
+    },
+    'earcon': {
+      term: 'Earcon',
+      def: 'A brief, distinctive sound that represents a specific event or conveys information — the research term behind what branding agencies call “UX sound”.',
+      source: 'Wikipedia, Earcon',
+      url: 'https://en.wikipedia.org/wiki/Earcon'
+    },
+    'ux-sound': {
+      term: 'UX sound',
+      def: 'Audio cues that enhance digital interactions — sound design for buttons, notifications and product behaviour that reinforces brand tone and usability.',
+      source: 'Sixième Son, Sonic Branding Glossary',
+      url: 'https://www.sixiemeson.com/news/sonic-branding-glossary/'
+    },
+    'on-hold-music': {
+      term: 'On-hold music',
+      def: 'Music played while a caller waits — sets tone, builds trust, and can be composed specifically to reflect the brand.',
+      source: 'Sixième Son, Sonic Branding Glossary',
+      url: 'https://www.sixiemeson.com/news/sonic-branding-glossary/'
+    },
+    'vocal-identity': {
+      term: 'Vocal identity / voice ID',
+      def: 'The spoken layer of a sonic brand — voice selection, tone, accent and pacing — aligned with brand personality.',
+      source: 'Sixième Son, Sonic Branding Glossary',
+      url: 'https://www.sixiemeson.com/news/sonic-branding-glossary/'
+    },
+    'sung-slogan': {
+      term: 'Sung slogan',
+      def: 'A musical interpretation of a brand’s tagline or verbal slogan, created to boost memorability and emotional impact.',
+      source: 'Sixième Son, Sonic Branding Glossary',
+      url: 'https://www.sixiemeson.com/news/sonic-branding-glossary/'
+    },
+    'localization': {
+      term: 'Localization variant',
+      def: 'A variation on the sonic identity that remains clearly recognisable while being customised for a specific communication shell or target audience.'
+    }
+  };
+  // ---- end of editable definitions ----
+
+  let openWrap = null;
+
+  function closeOpen() {
+    if (openWrap) {
+      openWrap.classList.remove('is-open');
+      const btn = openWrap.querySelector('button.term');
+      if (btn) btn.setAttribute('aria-expanded', 'false');
+      openWrap = null;
+    }
+  }
+
+  function buildTip(key, id) {
+    const entry = GLOSSARY[key];
+    const tip = document.createElement('span');
+    tip.className = 'tip';
+    tip.id = id;
+    tip.setAttribute('role', 'tooltip');
+    if (!entry) {
+      tip.textContent = 'No definition set for “' + key + '” yet — add one to the GLOSSARY object.';
+      return tip;
+    }
+    const termEl = document.createElement('span');
+    termEl.className = 'tip-term';
+    termEl.textContent = entry.term;
+    const defEl = document.createElement('span');
+    defEl.textContent = entry.def;
+    tip.appendChild(termEl);
+    tip.appendChild(defEl);
+    // Source attribution (entry.source / entry.url) is kept in the GLOSSARY
+    // data below but intentionally not rendered in the on-page tooltip.
+    return tip;
+  }
+
+  function keepInViewport(tip) {
+    tip.style.left = '0';
+    tip.style.right = 'auto';
+    const rect = tip.getBoundingClientRect();
+    const overflowRight = rect.right - (window.innerWidth - 12);
+    if (overflowRight > 0) {
+      tip.style.left = 'auto';
+      tip.style.right = '0';
+    }
+  }
+
+  document.querySelectorAll('button.term[data-term]').forEach(function (btn, i) {
+    const key = btn.getAttribute('data-term');
+    const wrap = document.createElement('span');
+    wrap.className = 'term-wrap';
+    btn.parentNode.insertBefore(wrap, btn);
+    wrap.appendChild(btn);
+
+    const tipId = 'tip-' + key + '-' + i;
+    const tip = buildTip(key, tipId);
+    wrap.appendChild(tip);
+    btn.setAttribute('aria-expanded', 'false');
+    btn.setAttribute('aria-describedby', tipId);
+
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      const isOpen = wrap.classList.contains('is-open');
+      closeOpen();
+      if (!isOpen) {
+        wrap.classList.add('is-open');
+        btn.setAttribute('aria-expanded', 'true');
+        openWrap = wrap;
+        keepInViewport(tip);
+      }
+    });
+    btn.addEventListener('mouseenter', function () { keepInViewport(tip); });
+  });
+
+  document.addEventListener('click', closeOpen);
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeOpen();
+  });
+})();
+</script>
+</body>
+</html>
