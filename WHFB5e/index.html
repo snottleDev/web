@@ -1,0 +1,629 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Warhammer Roster Forge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&family=IM+Fell+English&family=IBM+Plex+Sans+Condensed:wght@400;500;600&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+/* Layout: two panes — editor (left) and live A4 sheet preview (right); stacks on phones. The sheet itself is always paper-white. */
+:root{
+  --bg:#e9eaec; --panel:#f7f7f8; --card:#ffffff; --ink:#1d1f23; --muted:#5d636d; --line:#cfd2d7;
+  --accent:#8c1c22; --accent-ink:#ffffff; --accent-soft:#f3e3e4; --ok:#2f6b3a; --warn:#9a5a00;
+  --f-display:"Libre Caslon Text",Georgia,"Times New Roman",serif;
+  --f-fell:"IM Fell English","Libre Caslon Text",Georgia,serif;
+  --f-ui:"IBM Plex Sans Condensed","Arial Narrow",Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#17181b; --panel:#1f2125; --card:#272a2f; --ink:#e8e9ec; --muted:#a0a6b0; --line:#3a3e45;
+  --accent:#d0555b; --accent-ink:#17181b; --accent-soft:#3a2326; --ok:#7cc48a; --warn:#e2a54a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#17181b; --panel:#1f2125; --card:#272a2f; --ink:#e8e9ec; --muted:#a0a6b0; --line:#3a3e45;
+  --accent:#d0555b; --accent-ink:#17181b; --accent-soft:#3a2326; --ok:#7cc48a; --warn:#e2a54a; color-scheme:dark}
+
+*{box-sizing:border-box}
+html,body{background:var(--bg);color:var(--ink)}
+body{margin:0;font-family:var(--f-ui);font-size:14px;line-height:1.35}
+button,input,textarea,select{font:inherit;color:inherit}
+.app{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;padding-inline:16px;padding-block:14px 32px;max-width:1700px;margin:0 auto}
+@media (max-width:980px){.app{grid-template-columns:minmax(0,1fr)}}
+
+/* top bar */
+.bar{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px}
+.brand{font-family:var(--f-display);font-weight:700;font-size:20px;letter-spacing:.01em;text-transform:uppercase;margin-right:auto}
+.brand small{display:block;font-family:var(--f-ui);font-weight:400;text-transform:none;letter-spacing:0;font-size:12.5px;color:var(--muted)}
+.btn{border:1px solid var(--line);background:var(--card);border-radius:6px;padding:7px 12px;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--muted)}
+.btn:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+.btn.small{padding:3px 8px;font-size:12.5px}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--muted)}
+.btn.ghost:hover{color:var(--ink);border-color:var(--line)}
+.btn.danger{color:var(--accent)}
+.btn[disabled]{opacity:.5;cursor:default}
+.status{font-size:12.5px;color:var(--muted);min-height:1em}
+
+/* editor */
+.editor{display:flex;flex-direction:column;gap:14px;min-width:0}
+.listhead{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px;display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr);gap:10px 14px}
+@media (max-width:560px){.listhead{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.listhead .wide{grid-column:1/-1}}
+label.f{display:flex;flex-direction:column;gap:3px;font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);min-width:0}
+input[type=text],input[type=number],textarea{background:var(--card);border:1px solid var(--line);border-radius:5px;padding:6px 8px;width:100%;min-width:0;text-transform:none;letter-spacing:0;font-size:14px}
+textarea{resize:vertical;min-height:34px}
+.tally{display:flex;align-items:baseline;gap:8px;font-variant-numeric:tabular-nums}
+.tally b{font-family:var(--f-display);font-size:24px}
+.tally .over{color:var(--accent);font-weight:600}
+.tally .under{color:var(--ok)}
+
+.unit{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.unit-top{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end}
+.unit-top .name{flex:1 1 220px}
+.unit-top .pts{font-family:var(--f-display);font-size:20px;font-variant-numeric:tabular-nums;padding-bottom:4px;white-space:nowrap}
+.unit-top .pts small{font-family:var(--f-ui);font-size:12px;color:var(--muted)}
+.unit-tools{display:flex;gap:4px;flex-wrap:wrap}
+.sect{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.sect::after{content:"";flex:1;border-top:1px solid var(--line)}
+.scroll{overflow-x:auto;min-width:0}
+table.prof{border-collapse:collapse;font-variant-numeric:tabular-nums}
+table.prof th{font-weight:500;font-size:11.5px;color:var(--muted);padding:0 2px 3px;text-align:center}
+table.prof th.l{text-align:left}
+table.prof td{padding:1px 2px}
+table.prof input{padding:4px 4px;text-align:center;width:36px}
+table.prof input.lab{width:150px;text-align:left}
+table.prof input.cnt{width:48px}
+table.prof input.cost{width:56px}
+table.prof input.sv{width:56px}
+.opts{display:flex;flex-direction:column;gap:6px}
+.opt{display:grid;grid-template-columns:auto minmax(0,1.3fr) 70px auto minmax(0,1.5fr) auto;gap:6px;align-items:center}
+@media (max-width:640px){.opt{grid-template-columns:auto minmax(0,1fr) 64px auto}.opt .rules{grid-column:2/-1}.opt .x{grid-column:4;grid-row:1}}
+.tag{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;padding:2px 6px;border-radius:4px;background:var(--accent-soft);color:var(--accent);white-space:nowrap;cursor:pointer;border:0}
+.chk{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);white-space:nowrap}
+.addrow{display:flex;flex-wrap:wrap;gap:6px}
+.manual{display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:12.5px;color:var(--muted)}
+.manual input{width:90px}
+.confirm{display:flex;gap:6px;align-items:center;font-size:12.5px;color:var(--accent)}
+.empty{border:1px dashed var(--line);border-radius:8px;padding:24px;text-align:center;color:var(--muted)}
+
+/* drawer */
+.drawer{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.drawer h3{margin:0;font-family:var(--f-display);font-size:16px}
+.saved{display:flex;flex-direction:column;gap:4px;max-height:260px;overflow:auto}
+.saved .row{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:6px 8px;background:var(--card);border:1px solid var(--line);border-radius:6px}
+.saved .row span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.saved .row small{color:var(--muted);font-variant-numeric:tabular-nums}
+
+/* preview */
+.preview{position:sticky;top:calc(env(safe-area-inset-top,0px) + 10px);align-self:start;min-width:0;display:flex;flex-direction:column;gap:10px}
+@media (max-width:980px){.preview{position:static}}
+.pvhead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;font-size:12.5px;color:var(--muted)}
+.pages{display:flex;flex-direction:column;gap:14px;max-height:calc(100vh - 90px);overflow:auto;padding:2px}
+@media (max-width:980px){.pages{max-height:none}}
+.pagebox{position:relative;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.25),0 6px 18px rgba(0,0,0,.08);flex:none}
+.pagebox .sheet{transform-origin:0 0;position:absolute;left:0;top:0}
+
+/* ========== THE SHEET (print geometry in mm, always light) ========== */
+.sheet{width:210mm;height:297mm;background:#fff;color:#111;position:relative;overflow:hidden;font-family:var(--f-display);font-variant-numeric:lining-nums}
+.sheet *{box-sizing:border-box}
+.sh-title{position:absolute;left:11.2mm;top:3.2mm;font-family:var(--f-display);font-weight:700;font-size:21.5pt;line-height:1;text-transform:uppercase;letter-spacing:-.01em;white-space:nowrap;transform-origin:0 50%;color:#1a1a1a}
+.sh-army{position:absolute;left:114.1mm;top:4mm;width:87.7mm;height:8mm;border:.32mm solid #222;display:flex;align-items:center;justify-content:center;font-size:12.5pt;padding:0 2mm;white-space:nowrap;overflow:hidden}
+.sh-frame{position:absolute;left:10mm;top:13.9mm;width:191.4mm;height:260.6mm;border:.7mm solid #1a1a1a;z-index:3;pointer-events:none}
+.sh-hline{position:absolute;left:10mm;width:191.4mm;top:22.6mm;height:.65mm;background:#1a1a1a;z-index:2}
+.sh-vline{position:absolute;top:13.9mm;height:260.6mm;width:.3mm;background:#2a2a2a;z-index:2}
+.sh-hd{position:absolute;top:13.9mm;height:8.8mm;display:flex;align-items:center;justify-content:center;font-size:12pt;color:#222;white-space:nowrap;padding-top:.6mm}
+.sh-hd.fell{font-family:var(--f-fell);font-size:12.5pt}
+.sh-hd.left{justify-content:flex-start;padding-left:2.6mm}
+.sh-hd.sm{font-family:var(--f-fell);font-size:10.5pt}
+.sh-body{position:absolute;left:10mm;width:191.4mm;top:23.6mm;height:249.8mm;overflow:hidden}
+.sh-entry{position:relative;margin-bottom:5.48mm;font-size:13.4pt;line-height:5.48mm}
+.sh-entry .mc{width:45.6mm;padding-left:2.6mm;padding-right:1mm}
+.sh-entry .mc div{overflow-wrap:anywhere}
+.sh-entry .nm{font-weight:700}
+.sh-entry .st{position:absolute;left:46.1mm;display:flex}
+.sh-entry .st span{width:6.833mm;text-align:center;font-variant-numeric:lining-nums}
+.sh-entry .sv{position:absolute;left:107.6mm;width:9.1mm;text-align:center;font-size:12.5pt;line-height:5.48mm}
+.sh-entry .nt{position:absolute;left:116.7mm;width:49.7mm;padding-left:1.9mm;padding-right:1.2mm;hyphens:auto;-webkit-hyphens:auto}
+.sh-entry .pt{position:absolute;left:166.4mm;width:25mm;padding-left:1.9mm;white-space:nowrap}
+.sh-copy{position:absolute;left:8.8mm;top:277.6mm;font-family:Arial,Helvetica,sans-serif;font-size:6.4pt;line-height:1.45;color:#555;width:140mm;white-space:pre-line}
+.sh-totlab{position:absolute;right:43mm;top:276.6mm;height:9mm;display:flex;align-items:center;font-weight:700;font-size:20pt;letter-spacing:.02em;color:#1a1a1a}
+.sh-totbox{position:absolute;left:170.2mm;top:277.2mm;width:31.2mm;height:8.2mm;border:.32mm solid #222;display:flex;align-items:center;justify-content:center;font-size:13pt}
+.sh-pageno{position:absolute;left:170.2mm;top:277.2mm;width:31.2mm;height:8.2mm;display:flex;align-items:center;justify-content:center;font-family:var(--f-fell);font-size:11pt;color:#444}
+
+/* offscreen export host */
+#exporthost{position:fixed;left:-10000px;top:0;width:210mm;pointer-events:none}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header class="bar">
+    <div class="brand">Roster Forge<small>Warhammer Fantasy Battle, 5th edition roster sheets</small></div>
+    <button class="btn" id="btnNew" type="button">New list</button>
+    <button class="btn" id="btnSave" type="button">Save list</button>
+    <button class="btn primary" id="btnPdf" type="button">Download A4 PDF</button>
+  </header>
+
+  <section class="editor" aria-label="List editor">
+    <div class="listhead">
+      <label class="f wide">Army name (top-right box)<input type="text" id="armyName"></label>
+      <label class="f">Points limit (not printed)<input type="number" id="ptsLimit" min="0" step="1" placeholder="e.g. 2000"></label>
+      <div class="tally" id="tally" aria-live="polite"></div>
+      <label class="f wide">Sheet title<input type="text" id="sheetTitle"></label>
+      <label class="f" style="grid-column:2/-1">Footer note<textarea id="footNote" rows="2"></textarea></label>
+    </div>
+
+    <div id="units" class="editor"></div>
+    <div class="addrow">
+      <button class="btn primary" type="button" id="addUnit">+ Add unit</button>
+      <button class="btn" type="button" id="addChar">+ Add character</button>
+    </div>
+
+    <div class="drawer">
+      <h3>Saved lists</h3>
+      <div class="status" id="storeNote"></div>
+      <div class="saved" id="savedList"></div>
+      <div class="addrow">
+        <button class="btn small" type="button" id="btnExport">Export list as JSON</button>
+        <label class="btn small" for="importFile" style="cursor:pointer">Import JSON</label>
+        <input type="file" id="importFile" accept=".json,application/json" hidden>
+      </div>
+    </div>
+  </section>
+
+  <aside class="preview" aria-label="A4 preview">
+    <div class="pvhead"><span id="pageInfo">A4 preview</span><span class="status" id="status"></span></div>
+    <div class="pages" id="pages"></div>
+  </aside>
+</div>
+<div id="exporthost" aria-hidden="true"></div>
+
+<script>
+(() => {
+"use strict";
+const STATS = ["M","WS","BS","S","T","W","I","A","Ld"];
+const DEFAULT_FOOT = "Warhammer is a registered trademark of Games Workshop Ltd. © Copyright Games Workshop Ltd. 1996.\nAll rights reserved. Permission is granted to photocopy this sheet for personal use only.";
+const uid = () => Math.random().toString(36).slice(2, 10);
+const blankStats = () => Object.fromEntries(STATS.map(s => [s, ""]));
+
+function profile(label = "", count = 1, cost = 0, stats = {}, save = "") {
+  return { id: uid(), label, count, cost, stats: { ...blankStats(), ...stats }, save };
+}
+function option(cat, label = "", cost = 0, perModel = false, rules = "") {
+  return { id: uid(), cat, label, cost, perModel, rules };
+}
+function unit(o = {}) {
+  return { id: uid(), name: "", profiles: [profile()], options: [], rules: "", manual: "", ...o };
+}
+
+/* Example: the user's own Goblin roster. Costs per item were not on the sheet, so totals are entered manually. */
+function sampleList() {
+  return {
+    id: uid(), army: "The Endless Horde of Kilhelm XIII", title: "Warhammer Roster Sheet", foot: DEFAULT_FOOT, limit: "",
+    units: [
+      unit({ name: "Kilhem XIII",
+        profiles: [profile("Goblin Warlord", 1, 0, {M:4,WS:5,BS:6,S:4,T:4,W:3,I:5,A:4,Ld:7}, "4+/5+")],
+        options: [option("magic","Sword of Might"), option("magic","Armour of Fortune"), option("equip","Shield")],
+        rules: "12\" Ld, Fear Elves", manual: "86" }),
+      unit({ name: "The Reeksgard",
+        profiles: [profile("Goblins", 26, 0, {M:4,WS:2,BS:3,S:3,T:3,W:1,I:2,A:1,Ld:5}, "6+")],
+        options: [option("musician","Musician"), option("standard","Standard"), option("equip","Shields",0,true), option("equip","Spears",0,true)],
+        rules: "Animosity, Fear Elves", manual: "98" }),
+      unit({ name: "Bert",
+        profiles: [profile("Stone Troll", 1, 0, {M:6,WS:3,BS:1,S:5,T:4,W:3,I:1,A:3,Ld:4}, "-")],
+        rules: "Fear, Stupidity, Regenerate, Vomit, Auto dispell 4+", manual: "65" }),
+    ]
+  };
+}
+
+let list;
+const LS_KEY = "roster-forge-draft-v1";
+try { const d = localStorage.getItem(LS_KEY); if (d) list = JSON.parse(d); } catch (e) {}
+if (!list || !Array.isArray(list.units)) list = sampleList();
+
+/* ---------- points ---------- */
+const num = v => { const n = parseFloat(String(v).replace(",", ".")); return isFinite(n) ? n : 0; };
+const fmt = n => (Math.round(n * 100) / 100).toString();
+function computed(u) {
+  const lead = u.profiles[0] ? Math.max(0, num(u.profiles[0].count) || 0) : 1;
+  let t = 0;
+  for (const p of u.profiles) t += num(p.cost) * Math.max(0, num(p.count));
+  for (const o of u.options) t += num(o.cost) * (o.perModel ? lead : 1);
+  return t;
+}
+const unitPts = u => (String(u.manual).trim() !== "" ? num(u.manual) : computed(u));
+const listPts = () => list.units.reduce((s, u) => s + unitPts(u), 0);
+
+function notesFor(u) {
+  const parts = [];
+  const push = s => String(s || "").split(",").map(x => x.trim()).filter(Boolean).forEach(x => { if (!parts.some(p => p.toLowerCase() === x.toLowerCase())) parts.push(x); });
+  push(u.rules);
+  u.options.forEach(o => push(o.rules));
+  return parts.join(", ");
+}
+function profLabel(p) {
+  const c = Math.round(num(p.count));
+  return (c > 1 ? c + " " : "") + (p.label || "");
+}
+
+/* ---------- persistence ---------- */
+let saveTimer;
+function changed(structural) {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => { try { localStorage.setItem(LS_KEY, JSON.stringify(list)); } catch (e) {} }, 300);
+  if (structural) renderEditor(); else refreshTotals();
+  schedulePreview();
+}
+
+/* ---------- editor ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const CAT = { equip: "Equipment", magic: "Magic item", standard: "Standard", musician: "Musician", champion: "Champion", mount: "Mount", other: "Other" };
+const CAT_ORDER = ["equip", "magic", "standard", "musician", "champion", "mount", "other"];
+let pendingDelete = null;
+
+function bindHead() {
+  const a = $("#armyName"), l = $("#ptsLimit"), t = $("#sheetTitle"), f = $("#footNote");
+  a.value = list.army || ""; l.value = list.limit || ""; t.value = list.title || ""; f.value = list.foot ?? DEFAULT_FOOT;
+  a.oninput = () => { list.army = a.value; changed(); };
+  l.oninput = () => { list.limit = l.value; changed(); };
+  t.oninput = () => { list.title = t.value; changed(); };
+  f.oninput = () => { list.foot = f.value; changed(); };
+}
+
+function refreshTotals() {
+  const tot = listPts(), lim = num(list.limit);
+  let cls = "", extra = "";
+  if (lim > 0) { cls = tot > lim ? "over" : "under"; extra = tot > lim ? `${fmt(tot - lim)} over` : `${fmt(lim - tot)} left`; }
+  $("#tally").innerHTML = `<span style="color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.05em">Total</span><b>${fmt(tot)}pts</b>${extra ? `<span class="${cls}">${extra}</span>` : ""}`;
+  list.units.forEach(u => {
+    const el = document.querySelector(`[data-pts="${u.id}"]`);
+    if (el) el.innerHTML = `${fmt(unitPts(u))}pts${String(u.manual).trim() !== "" ? ` <small>manual (calc ${fmt(computed(u))})</small>` : ""}`;
+  });
+}
+
+function renderEditor() {
+  const host = $("#units");
+  if (!list.units.length) {
+    host.innerHTML = `<div class="empty">No units yet. Add a unit or a character to start the roster.</div>`;
+    refreshTotals(); return;
+  }
+  host.innerHTML = list.units.map((u, i) => `
+  <article class="unit" data-u="${u.id}">
+    <div class="unit-top">
+      <label class="f name">Name line (bold, optional)<input type="text" id="n-${u.id}" data-k="name" value="${esc(u.name)}" placeholder="e.g. Kilhem XIII"></label>
+      <div class="pts" data-pts="${u.id}"></div>
+      <div class="unit-tools">
+        <button class="btn small ghost" type="button" data-act="up" ${i === 0 ? "disabled" : ""} aria-label="Move up">↑</button>
+        <button class="btn small ghost" type="button" data-act="down" ${i === list.units.length - 1 ? "disabled" : ""} aria-label="Move down">↓</button>
+        <button class="btn small ghost" type="button" data-act="dup">Duplicate</button>
+        ${pendingDelete === u.id
+          ? `<span class="confirm">Remove unit? <button class="btn small danger" type="button" data-act="delyes">Remove</button><button class="btn small" type="button" data-act="delno">Keep</button></span>`
+          : `<button class="btn small ghost danger" type="button" data-act="del">Remove</button>`}
+      </div>
+    </div>
+
+    <div class="sect">Profiles <button class="btn small" type="button" data-act="addprof">+ Profile (mount, crew…)</button></div>
+    <div class="scroll"><table class="prof">
+      <thead><tr><th class="l">Model / type</th><th>No.</th><th>Pts each</th>${STATS.map(s => `<th>${s}</th>`).join("")}<th>Save</th><th></th></tr></thead>
+      <tbody>${u.profiles.map(p => `<tr data-p="${p.id}">
+        <td><input class="lab" type="text" id="pl-${p.id}" data-pk="label" value="${esc(p.label)}" placeholder="Goblins"></td>
+        <td><input class="cnt" type="number" min="0" step="1" id="pc-${p.id}" data-pk="count" value="${esc(p.count)}"></td>
+        <td><input class="cost" type="number" min="0" step="0.5" id="pp-${p.id}" data-pk="cost" value="${esc(p.cost)}"></td>
+        ${STATS.map(s => `<td><input type="text" id="ps-${p.id}-${s}" data-ps="${s}" value="${esc(p.stats[s])}" inputmode="numeric" aria-label="${s}"></td>`).join("")}
+        <td><input class="sv" type="text" id="pv-${p.id}" data-pk="save" value="${esc(p.save)}" placeholder="5+"></td>
+        <td>${u.profiles.length > 1 ? `<button class="btn small ghost danger" type="button" data-act="delprof" aria-label="Remove profile">✕</button>` : ""}</td>
+      </tr>`).join("")}</tbody></table></div>
+
+    <div class="sect">Options &amp; items</div>
+    <div class="opts">${u.options.map(o => `
+      <div class="opt" data-o="${o.id}">
+        <button class="tag" type="button" data-act="cycle" title="Change category">${CAT[o.cat] || "Other"}</button>
+        <input type="text" id="ol-${o.id}" data-ok="label" value="${esc(o.label)}" placeholder="Item name" aria-label="Item name">
+        <input type="number" min="0" step="0.5" id="oc-${o.id}" data-ok="cost" value="${esc(o.cost)}" aria-label="Points" title="Points">
+        <label class="chk"><input type="checkbox" id="om-${o.id}" data-ok="perModel" ${o.perModel ? "checked" : ""}> per model</label>
+        <input class="rules" type="text" id="or-${o.id}" data-ok="rules" value="${esc(o.rules)}" placeholder="Special rules → Notes (optional)" aria-label="Special rules">
+        <button class="btn small ghost danger x" type="button" data-act="delopt" aria-label="Remove option">✕</button>
+      </div>`).join("")}
+      <div class="addrow">
+        <button class="btn small" type="button" data-act="addopt" data-cat="equip">+ Equipment</button>
+        <button class="btn small" type="button" data-act="addopt" data-cat="magic">+ Magic item</button>
+        <button class="btn small" type="button" data-act="addopt" data-cat="standard">+ Standard</button>
+        <button class="btn small" type="button" data-act="addopt" data-cat="musician">+ Musician</button>
+        <button class="btn small" type="button" data-act="addopt" data-cat="champion">+ Champion</button>
+        <button class="btn small" type="button" data-act="addopt" data-cat="other">+ Other</button>
+      </div>
+    </div>
+
+    <label class="f">Unit special rules (comma separated → Notes)<input type="text" id="r-${u.id}" data-k="rules" value="${esc(u.rules)}" placeholder="Fear, Stupidity, Regenerate"></label>
+    <div class="manual"><label class="chk" for="m-${u.id}">Override points total</label><input type="number" min="0" step="0.5" id="m-${u.id}" data-k="manual" value="${esc(u.manual)}" placeholder="auto"><span>Leave empty to use the calculated cost.</span></div>
+  </article>`).join("");
+  refreshTotals();
+}
+
+const findU = el => list.units.find(u => u.id === el.closest("[data-u]")?.dataset.u);
+
+$("#units").addEventListener("input", e => {
+  const t = e.target, u = findU(t); if (!u) return;
+  const val = t.type === "checkbox" ? t.checked : t.value;
+  if (t.dataset.k) u[t.dataset.k] = val;
+  else if (t.dataset.pk || t.dataset.ps) {
+    const p = u.profiles.find(p => p.id === t.closest("[data-p]").dataset.p);
+    if (t.dataset.pk) p[t.dataset.pk] = val; else p.stats[t.dataset.ps] = val;
+  } else if (t.dataset.ok) {
+    const o = u.options.find(o => o.id === t.closest("[data-o]").dataset.o);
+    o[t.dataset.ok] = val;
+  }
+  changed();
+});
+
+$("#units").addEventListener("click", e => {
+  const b = e.target.closest("[data-act]"); if (!b) return;
+  const u = findU(b); if (!u) return;
+  const i = list.units.indexOf(u);
+  const act = b.dataset.act;
+  if (act === "up" && i > 0) [list.units[i - 1], list.units[i]] = [list.units[i], list.units[i - 1]];
+  else if (act === "down" && i < list.units.length - 1) [list.units[i + 1], list.units[i]] = [list.units[i], list.units[i + 1]];
+  else if (act === "dup") {
+    const c = JSON.parse(JSON.stringify(u)); c.id = uid();
+    c.profiles.forEach(p => p.id = uid()); c.options.forEach(o => o.id = uid());
+    list.units.splice(i + 1, 0, c);
+  }
+  else if (act === "del") { pendingDelete = u.id; renderEditor(); return; }
+  else if (act === "delno") { pendingDelete = null; renderEditor(); return; }
+  else if (act === "delyes") { pendingDelete = null; list.units.splice(i, 1); }
+  else if (act === "addprof") u.profiles.push(profile());
+  else if (act === "delprof") { const pid = b.closest("[data-p]").dataset.p; u.profiles = u.profiles.filter(p => p.id !== pid); }
+  else if (act === "addopt") {
+    const cat = b.dataset.cat;
+    const def = { standard: "Standard", musician: "Musician", champion: "Champion" }[cat] || "";
+    const o = option(cat, def, 0, cat === "equip");
+    u.options.push(o);
+    changed(true);
+    const inp = document.getElementById("ol-" + o.id); if (inp) { inp.focus(); inp.select(); }
+    return;
+  }
+  else if (act === "delopt") { const oid = b.closest("[data-o]").dataset.o; u.options = u.options.filter(o => o.id !== oid); }
+  else if (act === "cycle") {
+    const o = u.options.find(o => o.id === b.closest("[data-o]").dataset.o);
+    o.cat = CAT_ORDER[(CAT_ORDER.indexOf(o.cat) + 1) % CAT_ORDER.length];
+  }
+  changed(true);
+});
+
+$("#addUnit").onclick = () => { const u = unit(); list.units.push(u); changed(true); document.getElementById("pl-" + u.profiles[0].id)?.focus(); };
+$("#addChar").onclick = () => { const u = unit(); list.units.push(u); changed(true); document.getElementById("n-" + u.id)?.focus(); };
+
+/* ---------- sheet rendering ---------- */
+// column boundaries in mm (page coordinates), measured from the 1996 roster sheet
+const COLS = [10, 56.1, 62.93, 69.77, 76.6, 83.43, 90.27, 97.1, 103.93, 110.77, 117.6, 126.7, 176.4, 201.4];
+
+function sheetShell(pageIdx, pageCount, total) {
+  const s = document.createElement("div");
+  s.className = "sheet";
+  const hd = (x0, x1, txt, cls = "") => `<div class="sh-hd ${cls}" style="left:${x0}mm;width:${x1 - x0}mm">${txt}</div>`;
+  let h = `<div class="sh-title">${esc(list.title || "")}</div>
+    <div class="sh-army">${esc(list.army || "")}</div>
+    <div class="sh-frame"></div><div class="sh-hline"></div>`;
+  COLS.slice(1, -1).forEach(x => h += `<div class="sh-vline" style="left:${x - 0.15}mm"></div>`);
+  h += hd(COLS[0], COLS[1], "Models/Unit", "fell left");
+  STATS.forEach((st, k) => h += hd(COLS[k + 1], COLS[k + 2], st));
+  h += hd(COLS[10], COLS[11], "Save", "sm");
+  h += hd(COLS[11], COLS[12], "Notes", "fell");
+  h += hd(COLS[12], COLS[13], "Point Value", "fell");
+  h += `<div class="sh-body"></div><div class="sh-copy">${esc(list.foot ?? "")}</div>`;
+  if (pageIdx === pageCount - 1) h += `<div class="sh-totlab">TOTAL</div><div class="sh-totbox">${fmt(total)}pts</div>`;
+  else h += `<div class="sh-pageno">Continued — page ${pageIdx + 1}</div>`;
+  s.innerHTML = h;
+  return s;
+}
+
+function entryEl(u) {
+  const e = document.createElement("div");
+  e.className = "sh-entry";
+  const lines = [];
+  if (u.name.trim()) lines.push(`<div class="nm">${esc(u.name)}</div>`);
+  u.profiles.forEach(p => lines.push(`<div data-prof="${p.id}">${esc(profLabel(p)) || "&nbsp;"}</div>`));
+  u.options.forEach(o => { if (o.label.trim()) lines.push(`<div>${esc(o.label)}</div>`); });
+  let h = `<div class="mc">${lines.join("")}</div>`;
+  u.profiles.forEach(p => {
+    h += `<div class="st" data-st="${p.id}">${STATS.map(s => `<span>${esc(p.stats[s])}</span>`).join("")}</div>`;
+    h += `<div class="sv" data-sv="${p.id}">${esc(p.save).replace("/", "/<br>")}</div>`;
+  });
+  const n = notesFor(u);
+  h += `<div class="nt">${esc(n)}</div><div class="pt">${fmt(unitPts(u))}pts</div>`;
+  e.innerHTML = h;
+  return e;
+}
+
+function layoutEntry(e) {
+  const profs = e.querySelectorAll("[data-prof]");
+  const first = profs[0] ? profs[0].offsetTop : 0;
+  profs.forEach(pl => {
+    const id = pl.dataset.prof;
+    e.querySelector(`[data-st="${id}"]`).style.top = pl.offsetTop + "px";
+    e.querySelector(`[data-sv="${id}"]`).style.top = pl.offsetTop + "px";
+  });
+  const nt = e.querySelector(".nt"), pt = e.querySelector(".pt");
+  nt.style.top = first + "px"; pt.style.top = first + "px";
+  let h = e.querySelector(".mc").offsetHeight;
+  e.querySelectorAll(".sv,.nt").forEach(x => h = Math.max(h, x.offsetTop + x.offsetHeight));
+  e.style.height = h + "px";
+}
+
+function fitTitle(sheet) {
+  const t = sheet.querySelector(".sh-title");
+  t.style.transform = "";
+  const target = 96.2 * 96 / 25.4; // px at 1:1 — width of the printed title
+  const w = t.offsetWidth;
+  if (w > 0 && (list.title || "").toUpperCase() === "WARHAMMER ROSTER SHEET") t.style.transform = `scaleX(${(target / w).toFixed(4)})`;
+  else if (w > (100 * 96 / 25.4)) t.style.transform = `scaleX(${((100 * 96 / 25.4) / w).toFixed(4)})`;
+}
+
+/* Build all pages into a host at 1:1 scale, paginating by measured height. */
+function buildPages(host) {
+  host.innerHTML = "";
+  const total = listPts();
+  const make = () => { const s = sheetShell(0, 1, total); host.appendChild(s); return s; };
+  let sheets = [make()];
+  let body = sheets[0].querySelector(".sh-body");
+  const avail = body.clientHeight;
+  list.units.forEach(u => {
+    const e = entryEl(u);
+    body.appendChild(e); layoutEntry(e);
+    if (body.scrollHeight > avail + 1 && body.children.length > 1) {
+      body.removeChild(e);
+      const s = make(); sheets.push(s);
+      body = s.querySelector(".sh-body");
+      body.appendChild(e); layoutEntry(e);
+    }
+  });
+  const count = sheets.length;
+  sheets = sheets.map((s, i) => {
+    const fresh = sheetShell(i, count, total);
+    const fb = fresh.querySelector(".sh-body");
+    [...s.querySelector(".sh-body").children].forEach(c => fb.appendChild(c));
+    host.replaceChild(fresh, s);
+    fitTitle(fresh);
+    return fresh;
+  });
+  return sheets;
+}
+
+let pvTimer;
+function schedulePreview() { clearTimeout(pvTimer); pvTimer = setTimeout(renderPreview, 120); }
+function renderPreview() {
+  const pages = $("#pages");
+  const work = document.createElement("div");
+  work.style.cssText = "position:absolute;left:-10000px;top:0;width:210mm";
+  document.body.appendChild(work);
+  const sheets = buildPages(work);
+  pages.innerHTML = "";
+  sheets.forEach(s => { const box = document.createElement("div"); box.className = "pagebox"; box.appendChild(s); pages.appendChild(box); });
+  work.remove();
+  sizePreview();
+  $("#pageInfo").textContent = `A4 preview · ${sheets.length} page${sheets.length > 1 ? "s" : ""}`;
+}
+function sizePreview() {
+  const pages = $("#pages");
+  const W = pages.clientWidth - 4;
+  const pw = 210 * 96 / 25.4, ph = 297 * 96 / 25.4;
+  const k = Math.min(1, W / pw);
+  pages.querySelectorAll(".pagebox").forEach(b => {
+    b.style.width = pw * k + "px"; b.style.height = ph * k + "px";
+    b.firstChild.style.transform = `scale(${k})`;
+  });
+}
+new ResizeObserver(sizePreview).observe($("#pages"));
+
+/* ---------- status ---------- */
+let stTimer;
+function status(msg, sticky) { const s = $("#status"); s.textContent = msg; clearTimeout(stTimer); if (!sticky) stTimer = setTimeout(() => s.textContent = "", 4000); }
+const slug = s => (s || "roster").replace(/[^\w\- ]+/g, "").trim().replace(/\s+/g, "-").slice(0, 60) || "roster";
+
+/* ---------- downloads (plain browser) ---------- */
+function saveFile(filename, data) {
+  const blob = data instanceof Blob ? data : new Blob([data], { type: filename.endsWith(".json") ? "application/json" : "application/octet-stream" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+
+/* ---------- PDF ---------- */
+$("#btnPdf").onclick = async () => {
+  const btn = $("#btnPdf");
+  if (!window.html2canvas || !window.jspdf) { status("The PDF tools did not load. Reload the page and try again.", true); return; }
+  btn.disabled = true; status("Rendering pages…", true);
+  try {
+    await document.fonts.ready;
+    const host = $("#exporthost");
+    const sheets = buildPages(host);
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait", compress: true });
+    for (let i = 0; i < sheets.length; i++) {
+      const canvas = await html2canvas(sheets[i], { scale: 3, backgroundColor: "#ffffff", useCORS: true, logging: false });
+      if (i) pdf.addPage("a4", "portrait");
+      pdf.addImage(canvas.toDataURL("image/jpeg", 0.93), "JPEG", 0, 0, 210, 297, undefined, "FAST");
+    }
+    host.innerHTML = "";
+    saveFile(slug(list.army) + ".pdf", pdf.output("blob"));
+    status("PDF downloaded.");
+  } catch (err) {
+    console.error(err); status("PDF rendering failed: " + (err?.message || err), true);
+  } finally { btn.disabled = false; }
+};
+
+/* ---------- JSON export / import ---------- */
+$("#btnExport").onclick = () => { saveFile(slug(list.army) + ".json", JSON.stringify(list, null, 2)); status("List exported."); };
+$("#importFile").onchange = async e => {
+  const f = e.target.files[0]; e.target.value = "";
+  if (!f) return;
+  try {
+    const d = JSON.parse(await f.text());
+    if (!Array.isArray(d.units)) throw new Error("no units");
+    list = normalize(d); bindHead(); changed(true); status("Imported " + (list.army || "list") + ".");
+  } catch (err) { status("That file isn't a Roster Forge list (JSON with a units array).", true); }
+};
+function normalize(d) {
+  d.id = d.id || uid();
+  d.units = d.units.map(u => ({ ...unit(), ...u,
+    profiles: (u.profiles || [profile()]).map(p => ({ ...profile(), ...p, stats: { ...blankStats(), ...(p.stats || {}) } })),
+    options: (u.options || []).map(o => ({ ...option("other"), ...o })) }));
+  return d;
+}
+
+/* ---------- saved lists (this browser) ---------- */
+const LS_LISTS = "roster-forge-lists-v1";
+const localLists = () => { try { return JSON.parse(localStorage.getItem(LS_LISTS) || "{}"); } catch (e) { return {}; } };
+let savedCache = {};
+
+function loadSaved() {
+  $("#storeNote").textContent = "Saved in this browser only. Use Export to keep a copy or move lists between devices.";
+  savedCache = localLists(); renderSaved();
+}
+function renderSaved() {
+  const rows = Object.entries(savedCache).sort((a, b) => (b[1].updatedAt || "").localeCompare(a[1].updatedAt || ""));
+  $("#savedList").innerHTML = rows.length ? rows.map(([id, v]) => `<div class="row" data-id="${esc(id)}">
+    <span>${esc(v.name || "Untitled")}</span><small>${esc(v.pts ?? "")}pts · ${esc((v.updatedAt || "").slice(0, 10))}</small>
+    <span style="display:flex;gap:4px;flex:none"><button class="btn small" type="button" data-sa="open">Open</button>${pendingDelete === "s:" + id
+      ? `<button class="btn small danger" type="button" data-sa="delyes">Delete</button><button class="btn small" type="button" data-sa="delno">Keep</button>`
+      : `<button class="btn small ghost danger" type="button" data-sa="del">Delete</button>`}</span></div>`).join("")
+    : `<div class="status">No saved lists yet. “Save list” stores the one you're editing.</div>`;
+}
+$("#savedList").onclick = e => {
+  const b = e.target.closest("[data-sa]"); if (!b) return;
+  const id = b.closest("[data-id]").dataset.id, a = b.dataset.sa;
+  if (a === "open") { try { list = normalize(JSON.parse(savedCache[id].json)); list.id = id; bindHead(); changed(true); status("Opened " + (list.army || "list") + "."); } catch (err) { status("That saved list couldn't be read.", true); } }
+  else if (a === "del") { pendingDelete = "s:" + id; renderSaved(); }
+  else if (a === "delno") { pendingDelete = null; renderSaved(); }
+  else if (a === "delyes") {
+    pendingDelete = null;
+    const all = localLists(); delete all[id]; try { localStorage.setItem(LS_LISTS, JSON.stringify(all)); } catch (e) {} savedCache = all;
+    renderSaved();
+  }
+};
+$("#btnSave").onclick = () => {
+  const rec = { name: list.army || "Untitled", pts: fmt(listPts()), updatedAt: new Date().toISOString(), json: JSON.stringify(list) };
+  const all = localLists(); all[list.id] = rec;
+  try { localStorage.setItem(LS_LISTS, JSON.stringify(all)); status("Saved in this browser."); } catch (e) { status("This browser blocked saving. Use Export instead.", true); }
+  savedCache = all; renderSaved();
+};
+$("#btnNew").onclick = () => {
+  list = { id: uid(), army: "", title: "Warhammer Roster Sheet", foot: DEFAULT_FOOT, limit: list.limit || "", units: [unit()] };
+  bindHead(); changed(true); $("#armyName").focus();
+};
+
+/* ---------- boot ---------- */
+list = normalize(list);
+bindHead(); renderEditor(); renderPreview();
+document.fonts.ready.then(renderPreview);
+document.fonts.addEventListener?.("loadingdone", schedulePreview);
+loadSaved();
+})();
+</script>
+</body>
+</html>
